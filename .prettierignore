@@ -1,0 +1,25 @@
+# Ignore folders
+node_modules
+dist
+build
+coverage
+.env
+.env.local
+
+# Ignore compiled or generated files
+*.log
+*.lock
+*.tmp
+
+# Ignore specific project folders
+public
+.cache
+.next
+out
+
+# Ignore package manager files
+package-lock.json
+yarn.lock
+
+# Optional: ignore your database or uploads folder if any
+uploads
