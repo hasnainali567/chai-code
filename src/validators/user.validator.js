@@ -6,4 +6,10 @@ const registerSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required()
 });
-export { registerSchema };
+
+const loginSchema = Joi.object({
+    username: Joi.string().alphanum().min(3).max(30),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required()
+});
+export { registerSchema, loginSchema };

@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controllers.js";
+import { loginUser, registerUser } from "../controllers/user.controllers.js";
 import { upload } from "../middleware/multer.middleware.js";
 import app from "../app.js";
 import ApiError from "../utils/apiError.js";
+import { verifyUser } from "../middleware/user.middleware.js";
 
 const router = Router();
 
@@ -25,5 +26,11 @@ router.get('/', (req, res) => {
 
 router.route('/register').post(uploadMiddleware,
     registerUser);
+
+router.route('/login').post(
+    loginUser
+);
+
+router.route('/logout').post(verifyUser)
 
 export default router;
