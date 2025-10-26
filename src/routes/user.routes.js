@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginUser, registerUser } from "../controllers/user.controllers.js";
+import { loginUser, logoutUser, refreshToken, registerUser } from "../controllers/user.controllers.js";
 import { upload } from "../middleware/multer.middleware.js";
 import app from "../app.js";
 import ApiError from "../utils/apiError.js";
@@ -31,6 +31,7 @@ router.route('/login').post(
     loginUser
 );
 
-router.route('/logout').post(verifyUser)
+router.route('/logout').post(verifyUser, logoutUser);
+router.route('/refresh-token').post(refreshToken);
 
 export default router;
