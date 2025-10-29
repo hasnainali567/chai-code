@@ -1,15 +1,32 @@
 import mongoose, { Schema } from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
+const videoSchemaOptions = new Schema({
+    url: {
+        type: String,
+        required: true,
+    },
+    public_id: {
+        type: String,
+        required: true,
+    },
+}, { id: false });
+
+const thumbnailSchemaOptions = new Schema({
+    url: {
+        type: String,
+        required: true,
+    },
+    public_id: {
+        type: String,
+        required: true,
+    },
+}, { id: false });
+
+
 const videoSchema = new Schema({
-    videoFile: {
-        type: String,
-        required: true,
-    },
-    thumbnail: {
-        type: String,
-        required: true,
-    },
+    video: videoSchemaOptions,
+    thumbnail: thumbnailSchemaOptions,
     title: {
         type: String,
         required: true,
@@ -24,7 +41,7 @@ const videoSchema = new Schema({
         type: Number,
         required: true,
     },
-    owner : {
+    owner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,

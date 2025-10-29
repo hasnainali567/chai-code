@@ -2,6 +2,27 @@ import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+const avatarSchema = new Schema({
+    public_id: {
+        type: String,
+        required: true,
+    },
+    url: {
+        type: String,
+        required: true,
+    },
+}, { _id: false });
+
+const coverImageSchema = new Schema({
+    public_id: {
+        type: String,
+    },
+    url: {
+        type: String,
+    },
+}, { _id: false });
+
+
 const userSchema = new Schema({
     username: {
         type: String,
@@ -16,11 +37,12 @@ const userSchema = new Schema({
         required: true,
     },
     avatar: {
-        type: String,
+        type: avatarSchema,
         required: true,
     },
     coverImage: {
-        type: String,
+        type: coverImageSchema,
+        default: null,
     },
     refreshToken: {
         type: String,
