@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const avatarSchema = new Schema({
     public_id: {
@@ -93,5 +94,7 @@ userSchema.methods.generateRefreshToken = function () {
     return refreshToken;
 
 }
+
+userSchema.plugin(mongooseAggregatePaginate);
 const User = mongoose.model('User', userSchema);
 export default User;

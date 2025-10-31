@@ -10,7 +10,7 @@ const videoSchemaOptions = new Schema({
         type: String,
         required: true,
     },
-}, { id: false });
+}, { _id: false });
 
 const thumbnailSchemaOptions = new Schema({
     url: {
@@ -21,7 +21,7 @@ const thumbnailSchemaOptions = new Schema({
         type: String,
         required: true,
     },
-}, { id: false });
+}, { _id: false });
 
 
 const videoSchema = new Schema({
@@ -50,6 +50,8 @@ const videoSchema = new Schema({
         type: Number,
         default: 0,
     },
+}, {
+    timestamps: true,
 })
 
 videoSchema.plugin(mongooseAggregatePaginate);

@@ -1,14 +1,15 @@
 import asyncHandler from '../utils/asyncHandler.js';
-import { loginSchema, registerSchema } from '../validators/user.validator.js';
+import { registerSchema } from '../validators/user.validator.js';
 import ApiError from '../utils/apiError.js'
 import User from '../models/user.model.js'
 import Video from '../models/video.model.js';
 import { deleteFromCloudinary, uploadToCloudinary } from '../utils/cloudinary.js'
 import ApiResponse from '../utils/apiResponse.js';
-import fs from 'fs';
+import fs, { watch } from 'fs';
 import { OPTIONS } from '../constant.js';
 import jwt from 'jsonwebtoken';
 import generateAccessAndRefreshToken from '../utils/jwtTokens.js';
+import { Subscription } from '../models/subcribtion.model.js';
 
 const registerUser = asyncHandler(async (req, res, next) => {
     try {
@@ -43,7 +44,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
     }
 
     console.log(req.files);
-    
+
 
     const avatarLocalPath = req.files && req.files['avatar'] && req.files['avatar'][0].path;
     const coverImageLocalPath = req.files && req.files['coverImage'] ? req.files['coverImage'][0].path : null;
@@ -67,10 +68,6 @@ const registerUser = asyncHandler(async (req, res, next) => {
         throw new ApiError(500, 'User registration failed');
     }
     res.status(201).json(new ApiResponse(201, 'User registered successfully', { user: registeredUser }));
-
-
-
-
 
 });
 
@@ -113,7 +110,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
 
 const logoutUser = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
-    const user = await User.findByIdAndUpdate(userId, { $set: { refreshToken: undefined } }, { new: true });
+    const user = await User.findByIdAndUpdate(userId, { $unset: { refreshToken: 1 } }, { new: true });
 
     if (!user) {
         throw new ApiError(404, 'User not found');
@@ -180,11 +177,13 @@ const getCurrentUserProfile = asyncHandler(async (req, res, next) => {
 
 const updateCurrentUserProfile = asyncHandler(async (req, res, next) => {
     const user = req.user;
-    const { username, fullName, } = req.body;
 
-    if (!username && !fullName) {
+    console.log(req.body);
+    
+    if (!(req.body.username || req.body.fullName)) {
         throw new ApiError(400, 'No data provided for update');
     }
+    const { username, fullName, } = req.body;
 
     if (username) {
         const normalizedUsername = username?.trim().toLowerCase();
@@ -225,7 +224,7 @@ const updateCurrentUserAvatar = asyncHandler(async (req, res, next) => {
     }
     const avatarLocalPath = req.file.path;
     const avatar = await uploadToCloudinary(avatarLocalPath, 'avatars');
-    
+
     user.avatar = avatar;
     await user.save({ validateBeforeSave: false });
     res.status(200).json(new ApiResponse(200, 'User avatar updated successfully', { avatar: user.avatar }));
@@ -246,19 +245,160 @@ const updateCurrentUserCoverImage = async (req, res) => {
     res.status(200).json(new ApiResponse(200, 'User cover image updated successfully', { coverImage: user.coverImage }));
 }
 
-const getWatchHistory = asyncHandler(async (req, res, next) => {
-    const userId = req.user._id;
+const getUserChannelProfile = asyncHandler(async (req, res, next) => {
+    const { username } = req.params;
 
-    const user = await User.findById(userId).populate('watchHistory');
-    if (!user) {
+    if (!username.trim()) {
+        throw new ApiError(400, 'Username is required');
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match: {
+                username: username.toLowerCase().trim()
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields: {
+                subscribers: { $size: "$subscribers" },
+                subscribedTo: { $size: "$subscribedTo" },
+                isSubscribed: {
+                    $in: [
+                        req.user ? req.user._id : null,
+                        "$subscribers.subscriber"
+                    ]
+                }
+            }
+        },
+        {
+            $project: {
+                password: 0,
+                refreshToken: 0,
+                __v: 0,
+                "avatar.public_id": 0,
+                "coverImage.public_id": 0,
+                email: 0,
+                watchHistory: 0,
+                updatedAt: 0
+            }
+        }
+    ]);
+
+    if (!channel || channel.length === 0) {
         throw new ApiError(404, 'User not found');
     }
-    res.status(200).json(new ApiResponse(200, 'Watch history fetched successfully', { watchHistory: user.watchHistory }));
 
+    res.status(200).json(new ApiResponse(200, 'User channel profile fetched successfully', { channel: channel[0] }));
+});
+
+const getWatchHistory = asyncHandler(async (req, res, next) => {
+    const user = req.user;
+
+    const history = await User.aggregate([
+        {
+            $match: {
+                _id: user._id
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        username: 1,
+                                        _id: 0
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: { $arrayElemAt: ["$owner", 0] }
+                        }
+                    },
+                    {
+                        $project: {
+                            updatedAt: 0,
+                            video: 0,
+                            "thumbnail.public_id": 0,
+                            __v: 0,
+                            createdAt: 0
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $project: {
+                watchHistory: 1,
+                _id: 0,
+            }
+        }
+    ]);
+
+
+    if (!history) {
+        throw new ApiError(500, 'internal server error');
+    }
+
+
+    res.status(200).json(new ApiResponse(200, 'History fetched successfully ', { user: history[0] }))
+});
+
+const subcribeToChannel = asyncHandler(async (req, res, next) => {
+    const user = req.user;
+    const { channelId } = req.body || req.params;
+
+    if (!channelId) {
+        throw new ApiError(400, 'Channel ID is required');
+    }
+
+    const channel = await User.findById(channelId);
+    if (!channel) {
+        throw new ApiError(404, 'Channel not found');
+    }
+    const existingSubscription = await Subscription.findOne({ $and: [{ subcriber: user._id }, { channel: channelId }] });
+    if (existingSubscription) {
+        throw new ApiError(409, 'Already subscribed to this channel');
+    }
+    const newSubscription = new Subscription({
+        subcriber: user._id,
+        channel: channelId
+    });
+    await newSubscription.save();
+    res.status(201).json(new ApiResponse(201, 'Subscribed to channel successfully'));
 });
 
 
-    
+
 export {
     registerUser,
     loginUser,
@@ -269,5 +409,7 @@ export {
     updateCurrentUserProfile,
     updateCurrentUserAvatar,
     updateCurrentUserCoverImage,
-    getWatchHistory
+    getUserChannelProfile,
+    getWatchHistory,
+    subcribeToChannel
 };
