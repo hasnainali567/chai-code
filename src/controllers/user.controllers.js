@@ -373,30 +373,6 @@ const getWatchHistory = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, 'History fetched successfully ', { user: history[0] }))
 });
 
-const subcribeToChannel = asyncHandler(async (req, res, next) => {
-    const user = req.user;
-    const { channelId } = req.body || req.params;
-
-    if (!channelId) {
-        throw new ApiError(400, 'Channel ID is required');
-    }
-
-    const channel = await User.findById(channelId);
-    if (!channel) {
-        throw new ApiError(404, 'Channel not found');
-    }
-    const existingSubscription = await Subscription.findOne({ $and: [{ subcriber: user._id }, { channel: channelId }] });
-    if (existingSubscription) {
-        throw new ApiError(409, 'Already subscribed to this channel');
-    }
-    const newSubscription = new Subscription({
-        subcriber: user._id,
-        channel: channelId
-    });
-    await newSubscription.save();
-    res.status(201).json(new ApiResponse(201, 'Subscribed to channel successfully'));
-});
-
 
 
 export {
@@ -410,6 +386,5 @@ export {
     updateCurrentUserAvatar,
     updateCurrentUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory,
-    subcribeToChannel
+    getWatchHistory
 };
