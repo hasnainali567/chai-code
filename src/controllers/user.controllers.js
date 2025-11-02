@@ -10,6 +10,7 @@ import { OPTIONS } from '../constant.js';
 import jwt from 'jsonwebtoken';
 import generateAccessAndRefreshToken from '../utils/jwtTokens.js';
 import { Subscription } from '../models/subcribtion.model.js';
+import mongoose from 'mongoose';
 
 const registerUser = asyncHandler(async (req, res, next) => {
     try {
@@ -91,15 +92,18 @@ const loginUser = asyncHandler(async (req, res, next) => {
         throw new ApiError(400, 'Validation Error', 'Password is required for login');
     }
 
-    const user = await User.findOne({ $or: [{ email }, { username }] });
+    const user = await User.findOne({ $and: [{ email }, { username }] });
+    if (!user) {
+        throw new ApiError(401, 'Invalid email or username');
+    }
 
     if (!user || !(await user.comparePassword(password))) {
-        throw new ApiError(401, 'Invalid email or password');
+        throw new ApiError(401, 'Invalid password');
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user);
 
-    const loggedInUser = await User.findById(user._id).select('-password -__v -refreshToken');
+    const loggedInUser = await User.findById(user._id).select('-password -__v -refreshToken -watchHistory -avatar.public_id -coverImage.public_id');
 
     res.status(200)
         .cookie('refreshToken', refreshToken, OPTIONS)
@@ -280,7 +284,7 @@ const getUserChannelProfile = asyncHandler(async (req, res, next) => {
                 subscribedTo: { $size: "$subscribedTo" },
                 isSubscribed: {
                     $in: [
-                        req.user ? req.user._id : null,
+                        new mongoose.Types.ObjectId(req.user ? req.user._id : null),
                         "$subscribers.subscriber"
                     ]
                 }
@@ -370,7 +374,7 @@ const getWatchHistory = asyncHandler(async (req, res, next) => {
     }
 
 
-    res.status(200).json(new ApiResponse(200, 'History fetched successfully ', { user: history[0] }))
+    res.status(200).json(new ApiResponse(200, 'History fetched successfully ', { watchHistory: history[0].watchHistory }))
 });
 
 

@@ -4,8 +4,6 @@ import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
-
-
 const subcribeToChannel = asyncHandler(async (req, res, next) => {
     const user = req.user;
     const { channelId } = req.body || req.params;
@@ -52,7 +50,6 @@ const unSubcribeFromChannel = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, 'Unsubscribed from channel successfully'));
 });
 
-
 const getAllSubscriptions = asyncHandler(async (req, res, next) => {
     const user = req.user;
     const subscriptions = await Subscription.aggregate([
@@ -88,9 +85,6 @@ const getAllSubscriptions = asyncHandler(async (req, res, next) => {
 
 
 });
-
-
-
 
 export {
     subcribeToChannel,

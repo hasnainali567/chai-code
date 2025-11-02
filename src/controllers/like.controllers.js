@@ -9,22 +9,55 @@ const getAllLikedVideos = asyncHandler(async (req, res, next) => {
         {
             $match: { likedBy: user._id, video: { $ne: null } }
         },
-        { $lookup: {
-            from: 'videos',
-            localField: 'video',
-            foreignField: '_id',
-            as: 'videoDetails'
-        }},
+        {
+            $lookup: {
+                from: 'videos',
+                localField: 'video',
+                foreignField: '_id',
+                as: 'videoDetails',
+                pipeline: [
+                    {
+                        $project: {
+                            title: 1,
+                            'thumbnail.url': 1,
+                            duration: 1,
+                            views: 1,
+                            createdAt: 1,
+                            owner: 1
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: 'users',
+                            localField: 'owner',
+                            foreignField: '_id',
+                            as: 'owner',
+                            pipeline: [
+                                {
+                                    $project: {
+                                        username: 1,
+                                        _id: 0
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                ]
+            }
+        },
         { $unwind: '$videoDetails' },
-        { $project: {
-            _id: 0,
-            videoId: '$videoDetails._id',
-            title: '$videoDetails.title',
-            description: '$videoDetails.description',
-            thumbnail: '$videoDetails.thumbnail',
-            url: '$videoDetails.video.url',
-            owner: '$videoDetails.owner',
-        }}
+        {
+            $project : {
+                _id : '$videoDetails._id',
+                title : '$videoDetails.title',
+                thumbnail : '$videoDetails.thumbnail',
+                duration : '$videoDetails.duration',
+                views : '$videoDetails.views',
+                createdAt : '$videoDetails.createdAt',
+                owner : { $arrayElemAt: ['$videoDetails.owner', 0] }
+
+            }
+        }
     ]);
     res.status(200).json(new ApiResponse(200, 'Liked videos fetched successfully', { likedVideos }));
 });
@@ -74,7 +107,7 @@ const toggleLikeOnTweet = asyncHandler(async (req, res, next) => {
     if (!tweetId) {
         throw new ApiError(400, 'Comment ID is required');
     }
-    const existingTweet = await Like.findOne({ $and : [{ likedBy: user._id }, { tweet: tweetId }] });
+    const existingTweet = await Like.findOne({ $and: [{ likedBy: user._id }, { tweet: tweetId }] });
     if (existingTweet) {
         await Tweet.findByIdAndDelete(existingTweet._id);
         return res.status(200).json(new ApiResponse(200, 'Comment unliked successfully'));

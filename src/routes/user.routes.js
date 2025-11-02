@@ -15,6 +15,7 @@ import { upload } from "../middleware/multer.middleware.js";
 import { verifyUser } from "../middleware/user.middleware.js";
 import { uploadVideo } from "../controllers/video.controllers.js";
 import { uploadMiddleware } from "../middleware/upload.middleware.js";
+import { verifyUserOptional } from "../middleware/optionalAuth.middleware.js";
 
 const router = Router();
 
@@ -29,6 +30,6 @@ router.route('/me').get(verifyUser, getCurrentUserProfile);
 router.route('/update-profile').patch(verifyUser, updateCurrentUserProfile);
 router.route('/update-avatar').put(verifyUser, upload.single('avatar'), updateCurrentUserAvatar);
 router.route('/update-cover').put(verifyUser, upload.single('coverImage'), updateCurrentUserCoverImage);
-router.route('/channel/:username').get(getUserChannelProfile);
+router.route('/channel/:username').get(verifyUserOptional, getUserChannelProfile);
 router.route('/history').get(verifyUser, getWatchHistory);
 export default router;

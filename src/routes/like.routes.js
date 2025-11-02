@@ -4,9 +4,11 @@ import { getAllLikedVideos, toggleLikeOnComment, toggleLikeOnTweet, toggleLikeOn
 
 const router = Router();
 
-router.route('/like-toggle/:videoId').post(verifyUser, toggleLikeOnVideo);
-router.route('/like-toggle-comment/:commentId').post(verifyUser, toggleLikeOnComment);
-router.route('/like-toggle-tweet/:tweetId').post(verifyUser, toggleLikeOnTweet);
-router.route('/get-all-liked').get(verifyUser, getAllLikedVideos);
+router.use(verifyUser);
+
+router.route('/like-toggle/:videoId').post(toggleLikeOnVideo);
+router.route('/like-toggle-comment/:commentId').post(toggleLikeOnComment);
+router.route('/like-toggle-tweet/:tweetId').post(toggleLikeOnTweet);
+router.route('/get-all-liked').get(getAllLikedVideos);
 
 export default router;
