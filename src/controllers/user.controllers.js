@@ -14,7 +14,6 @@ import mongoose from 'mongoose';
 
 const registerUser = asyncHandler(async (req, res, next) => {
     try {
-
         if (!req.body || Object.keys(req.body).length === 0) {
             throw new ApiError(400, 'Validation Error', ['Request body is missing or empty']);
         }
@@ -44,8 +43,6 @@ const registerUser = asyncHandler(async (req, res, next) => {
         return new ApiError(409, 'User with given email or username already exists');
     }
 
-    console.log(req.files);
-
 
     const avatarLocalPath = req.files && req.files['avatar'] && req.files['avatar'][0].path;
     const coverImageLocalPath = req.files && req.files['coverImage'] ? req.files['coverImage'][0].path : null;
@@ -68,7 +65,12 @@ const registerUser = asyncHandler(async (req, res, next) => {
     if (!registeredUser) {
         throw new ApiError(500, 'User registration failed');
     }
-    res.status(201).json(new ApiResponse(201, 'User registered successfully', { user: registeredUser }));
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(registeredUser);
+    res.status(201)
+        .cookie('refreshToken', refreshToken, OPTIONS)
+        .cookie('accessToken', accessToken, OPTIONS)
+        .json(new ApiResponse(201, 'User registered successfully', { user: registeredUser, accessToken }));
 
 });
 
@@ -108,7 +110,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
     res.status(200)
         .cookie('refreshToken', refreshToken, OPTIONS)
         .cookie('accessToken', accessToken, OPTIONS)
-        .json(new ApiResponse(200, 'Login successful', { loggedInUser, accessToken }));
+        .json(new ApiResponse(200, 'Login successful', { user : loggedInUser, accessToken }));
 
 });
 
@@ -300,6 +302,25 @@ const getUserChannelProfile = asyncHandler(async (req, res, next) => {
                 email: 0,
                 watchHistory: 0,
                 updatedAt: 0
+            }
+        },
+        {
+            $lookup : {
+                from: "videos",
+                localField : "_id",
+                foreignField: 'owner',
+                as : 'videos',
+                pipeline : [
+                    {
+                        $project : {
+                            updatedAt : 0,
+                            'video.public_id' : 0,
+                            'thumbnail.public_id' : 0,
+                            owner : 0,
+                            __v : 0
+                        }
+                    }
+                ]
             }
         }
     ]);
