@@ -228,13 +228,14 @@ const updateCurrentUserAvatar = asyncHandler(async (req, res, next) => {
     if (!req.file) {
         throw new ApiError(400, 'No avatar file uploaded');
     }
+    const oldAvatarId = user.avatar?.public_id;
     const avatarLocalPath = req.file.path;
     const avatar = await uploadToCloudinary(avatarLocalPath, 'avatars');
 
     user.avatar = avatar;
     await user.save({ validateBeforeSave: false });
     res.status(200).json(new ApiResponse(200, 'User avatar updated successfully', { avatar: user.avatar }));
-    await deleteFromCloudinary(user.avatar.public_id);
+    await deleteFromCloudinary(oldAvatarId);
 });
 
 const updateCurrentUserCoverImage = async (req, res) => {
