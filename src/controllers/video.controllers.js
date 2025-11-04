@@ -104,7 +104,8 @@ const getAllVideos = asyncHandler(async (req, res, next) => {
     ]);
 
     const videos = await Video.aggregatePaginate(aggregate, options)
-    res.status(200).json(new ApiResponse(200, 'Videos fetched successfully', { videos }));
+    
+    res.status(200).json(new ApiResponse(200, 'Videos fetched successfully', { videos : [...videos.docs], pagination: {...videos} }));
 });
 
 const getVideoById = asyncHandler(async (req, res, next) => {
