@@ -94,7 +94,6 @@ const getAllVideos = asyncHandler(async (req, res, next) => {
         },
         {
             $project: {
-                description: 0,
                 __v: 0,
                 video: 0,
                 updatedAt: 0,
